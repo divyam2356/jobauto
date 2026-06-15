@@ -47,7 +47,17 @@ def find_parent_page(notion):
     pages = response.get("results", [])
 
     if not pages:
+        print("\nNo pages found! Make sure your integration is connected to a page.")
+        print("Run this locally first, then set NOTION_DATABASE_ID in GitHub secrets.")
         return None
+
+    if len(pages) == 1:
+        page_id = pages[0]["id"]
+        title_prop = pages[0].get("properties", {}).get("title", {})
+        title_items = title_prop.get("title", [])
+        title = title_items[0].get("plain_text", "Untitled") if title_items else "Untitled"
+        print(f"\nUsing page: {title} ({page_id})")
+        return page_id
 
     print("\nFound these Notion pages:\n")
     for i, page in enumerate(pages):
@@ -107,7 +117,7 @@ def main():
             sys.exit(1)
         os.environ["NOTION_TOKEN"] = token
 
-    notion = NotionClient(auth=token)
+    notion = NotionClient(auth=token, notion_version="2022-06-28")
 
     print("\nNotion Database Setup")
     print("=" * 60)

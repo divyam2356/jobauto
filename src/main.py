@@ -114,6 +114,12 @@ def ensure_notion_db():
     token = os.getenv("NOTION_TOKEN", "")
     if db_id:
         return True
+
+    is_ci = os.getenv("CI", "") or os.getenv("GITHUB_ACTIONS", "")
+    if is_ci:
+        logger.error("NOTION_DATABASE_ID not set in GitHub secrets. Skipping Notion upload.")
+        return False
+
     if not token:
         print("\nNOTION_TOKEN not found. Let's set up your Notion database.\n")
     else:

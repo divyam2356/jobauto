@@ -22,9 +22,6 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Install Scrapy
-        run: pip install scrapy
-
       - name: Run job aggregator
         run: python -m src.main
         env:
@@ -32,4 +29,3 @@ jobs:
           NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
           ADZUNA_APP_ID: ${{ secrets.ADZUNA_APP_ID }}
           ADZUNA_APP_KEY: ${{ secrets.ADZUNA_APP_KEY }}
-          SCRAPY_SETTINGS_MODULE: settings

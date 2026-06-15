@@ -12,8 +12,8 @@ def fetch(config):
     app_id = os.getenv("ADZUNA_APP_ID", "")
     app_key = os.getenv("ADZUNA_APP_KEY", "")
 
-    if not app_id or not app_key:
-        logger.warning("ADZUNA_APP_ID or ADZUNA_APP_KEY not set, skipping Adzuna")
+    if not app_id or not app_key or app_id == "xxx" or app_key == "xxx":
+        logger.warning("ADZUNA_APP_ID or ADZUNA_APP_KEY not properly set, skipping Adzuna")
         return []
 
     countries = config.get("adzuna", {}).get("countries", ["in"])

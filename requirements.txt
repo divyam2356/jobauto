@@ -1,5 +1,5 @@
-scrapy>=2.13
 requests
 pyyaml
 python-dotenv
 notion-client
+parsel

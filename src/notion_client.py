@@ -11,7 +11,7 @@ def get_client():
     token = os.getenv("NOTION_TOKEN", "")
     if not token:
         raise ValueError("NOTION_TOKEN not set")
-    return NotionClient(auth=token)
+    return NotionClient(auth=token, notion_version="2022-06-28")
 
 
 def get_database_id():
@@ -60,7 +60,7 @@ def create_page(notion, database_id, job, date_found):
     posted = job.get("posted_date", "")
 
     properties = {
-        "Title": {
+        "Name": {
             "title": [{"text": {"content": title[:2000]}}]
         },
         "Company": {
