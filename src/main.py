@@ -91,17 +91,18 @@ def main():
     all_jobs = api_jobs + linkedin_jobs
     logger.info(f"Total combined jobs: {len(all_jobs)}")
 
-    from src.filters import filter_jobs, deduplicate
+    from src.filters import filter_jobs, deduplicate, sort_by_recency
     filtered = filter_jobs(all_jobs, config)
     deduped = deduplicate(filtered)
-    logger.info(f"After filtering + dedup: {len(deduped)} jobs")
+    sorted_jobs = sort_by_recency(deduped)
+    logger.info(f"After filtering + dedup: {len(sorted_jobs)} jobs")
 
-    if not deduped:
+    if not sorted_jobs:
         logger.info("No new jobs to upload")
         return
 
     from src.notion_client import upload_jobs
-    created = upload_jobs(deduped)
+    created = upload_jobs(sorted_jobs)
     logger.info(f"Uploaded {created} new jobs to Notion")
 
     logger.info("=" * 60)

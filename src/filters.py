@@ -1,7 +1,10 @@
 import logging
 import re
+from datetime import datetime, timezone, timedelta
 
 logger = logging.getLogger(__name__)
+
+MAX_POSTED_AGE_HOURS = 72
 
 
 def is_entry_level(title, config):
@@ -17,14 +20,12 @@ def is_entry_level(title, config):
         if kw.lower() in title_lower:
             return True
 
-    if re.search(r"\b(\d{1,2})\s*(?:years?|yrs?)\b", title_lower):
-        match = re.search(r"\b(\d{1,2})\s*(?:years?|yrs?)\b", title_lower)
-        years = int(match.group(1))
-        if years <= 2:
-            return True
-        return False
+    years_match = re.search(r"\b(\d{1,2})\s*(?:years?|yrs?)\b", title_lower)
+    if years_match:
+        years = int(years_match.group(1))
+        return years <= 2
 
-    return False
+    return True
 
 
 def is_relevant_location(location, config):
@@ -48,6 +49,18 @@ def is_relevant_location(location, config):
     return False
 
 
+def is_recent(posted_date, max_hours=MAX_POSTED_AGE_HOURS):
+    if not posted_date:
+        return False
+    try:
+        posted = datetime.fromisoformat(posted_date.replace("Z", "+00:00"))
+        if posted.tzinfo is None:
+            posted = posted.replace(tzinfo=timezone.utc)
+        return (datetime.now(timezone.utc) - posted) <= timedelta(hours=max_hours)
+    except (ValueError, TypeError):
+        return False
+
+
 def filter_jobs(jobs, config):
     filtered = []
     for job in jobs:
@@ -63,10 +76,31 @@ def filter_jobs(jobs, config):
         if not is_relevant_location(location, config):
             continue
 
+        if not is_recent(job.get("posted_date", "")):
+            continue
+
         filtered.append(job)
 
-    logger.info(f"Filtered {len(jobs)} -> {len(filtered)} entry-level jobs")
+    logger.info(f"Filtered {len(jobs)} -> {len(filtered)} entry-level jobs (last {MAX_POSTED_AGE_HOURS}h)")
     return filtered
+
+
+def sort_by_recency(jobs):
+    def _parse_date(job):
+        posted = job.get("posted_date", "")
+        if not posted:
+            return datetime.min.replace(tzinfo=timezone.utc)
+        try:
+            dt = datetime.fromisoformat(posted.replace("Z", "+00:00"))
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt
+        except (ValueError, TypeError):
+            return datetime.min.replace(tzinfo=timezone.utc)
+
+    sorted_jobs = sorted(jobs, key=_parse_date, reverse=True)
+    logger.info(f"Sorted {len(sorted_jobs)} jobs by recency (newest first)")
+    return sorted_jobs
 
 
 def deduplicate(jobs):
