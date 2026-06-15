@@ -94,8 +94,6 @@ def upload_jobs(jobs):
     notion = get_client()
     database_id = get_database_id()
 
-    _clear_database(notion, database_id)
-
     date_found = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
     created = 0
@@ -106,6 +104,34 @@ def upload_jobs(jobs):
 
     logger.info(f"Notion: created {created} new pages")
     return created
+
+
+def clear_database():
+    notion = get_client()
+    database_id = get_database_id()
+
+    has_more = True
+    start_cursor = None
+    archived = 0
+
+    while has_more:
+        body = {"page_size": 100}
+        if start_cursor:
+            body["start_cursor"] = start_cursor
+        response = notion.request(f"databases/{database_id}/query", "POST", body=body)
+
+        for page in response.get("results", []):
+            try:
+                notion.pages.update(page_id=page["id"], archived=True)
+                archived += 1
+            except Exception as e:
+                logger.warning("Failed to archive page %s: %s", page["id"], e)
+
+        has_more = response.get("has_more", False)
+        start_cursor = response.get("next_cursor")
+
+    logger.info(f"Notion: archived {archived} old pages")
+    return archived
 
 
 def _clear_database(notion, database_id):

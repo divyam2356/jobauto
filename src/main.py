@@ -80,11 +80,16 @@ def main():
 
     config = load_config()
 
-    logger.info("Fetching jobs from APIs...")
+    logger.info("Step 1: Clearing Notion database...")
+    from src.notion_client import clear_database
+    cleared = clear_database()
+    logger.info(f"Cleared {cleared} old jobs from Notion")
+
+    logger.info("Step 2: Fetching jobs from APIs...")
     api_jobs = fetch_api_jobs(config)
     logger.info(f"Total API jobs: {len(api_jobs)}")
 
-    logger.info("Fetching LinkedIn jobs...")
+    logger.info("Step 3: Fetching LinkedIn jobs...")
     linkedin_jobs = fetch_linkedin_jobs(config)
     logger.info(f"Total LinkedIn jobs: {len(linkedin_jobs)}")
 
@@ -101,6 +106,7 @@ def main():
         logger.info("No new jobs to upload")
         return
 
+    logger.info("Step 4: Uploading new jobs to Notion...")
     from src.notion_client import upload_jobs
     created = upload_jobs(sorted_jobs)
     logger.info(f"Uploaded {created} new jobs to Notion")
