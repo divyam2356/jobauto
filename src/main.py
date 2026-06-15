@@ -138,5 +138,7 @@ def ensure_notion_db():
 if __name__ == "__main__":
     if "--setup" in sys.argv or not os.getenv("NOTION_DATABASE_ID", ""):
         if not ensure_notion_db():
-            sys.exit(1)
+            is_ci = os.getenv("CI", "") or os.getenv("GITHUB_ACTIONS", "")
+            if not is_ci:
+                sys.exit(1)
     main()
