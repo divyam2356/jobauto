@@ -7,6 +7,18 @@ from notion_client import Client as NotionClient
 logger = logging.getLogger(__name__)
 
 
+def _posted_to_sort_order(posted_date):
+    if not posted_date:
+        return 0
+    try:
+        dt = datetime.fromisoformat(posted_date.replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return int(dt.timestamp())
+    except (ValueError, TypeError):
+        return 0
+
+
 def get_client():
     token = os.getenv("NOTION_TOKEN", "")
     if not token:
@@ -27,28 +39,6 @@ def query_database(notion, database_id, start_cursor=None):
         body["start_cursor"] = start_cursor
     path = f"databases/{database_id}/query"
     return notion.request(path, "POST", body=body)
-
-
-def fetch_existing_urls(notion, database_id):
-    urls = set()
-    has_more = True
-    start_cursor = None
-
-    while has_more:
-        response = query_database(notion, database_id, start_cursor)
-
-        for page in response.get("results", []):
-            props = page.get("properties", {})
-            url_prop = props.get("Apply URL", {})
-            url_value = url_prop.get("url")
-            if url_value:
-                urls.add(url_value)
-
-        has_more = response.get("has_more", False)
-        start_cursor = response.get("next_cursor")
-
-    logger.info(f"Notion: found {len(urls)} existing job URLs")
-    return urls
 
 
 def create_page(notion, database_id, job, date_found):
@@ -86,6 +76,12 @@ def create_page(notion, database_id, job, date_found):
             "multi_select": [{"name": tag} for tag in tags[:10]]
         }
 
+    sort_order = _posted_to_sort_order(posted)
+    if sort_order:
+        properties["Sort Order"] = {
+            "number": sort_order
+        }
+
     try:
         notion.pages.create(parent={"database_id": database_id}, properties=properties)
         return True
@@ -97,24 +93,83 @@ def create_page(notion, database_id, job, date_found):
 def upload_jobs(jobs):
     notion = get_client()
     database_id = get_database_id()
-    existing_urls = fetch_existing_urls(notion, database_id)
+
+    _clear_database(notion, database_id)
 
     date_found = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
     created = 0
-    skipped = 0
 
     for job in jobs:
-        url = job.get("url", "")
-
-        if url and url in existing_urls:
-            skipped += 1
-            continue
-
         if create_page(notion, database_id, job, date_found):
             created += 1
-            if url:
-                existing_urls.add(url)
 
-    logger.info(f"Notion: created {created} new pages, skipped {skipped} duplicates")
+    logger.info(f"Notion: created {created} new pages")
     return created
+
+
+def _clear_database(notion, database_id):
+    has_more = True
+    start_cursor = None
+    archived = 0
+
+    while has_more:
+        body = {"page_size": 100}
+        if start_cursor:
+            body["start_cursor"] = start_cursor
+        response = notion.request(f"databases/{database_id}/query", "POST", body=body)
+
+        for page in response.get("results", []):
+            try:
+                notion.pages.update(page_id=page["id"], archived=True)
+                archived += 1
+            except Exception as e:
+                logger.warning("Failed to archive page %s: %s", page["id"], e)
+
+        has_more = response.get("has_more", False)
+        start_cursor = response.get("next_cursor")
+
+    logger.info(f"Notion: archived {archived} old pages")
+
+
+def _backfill_sort_order(notion, database_id):
+    has_more = True
+    start_cursor = None
+    updated = 0
+
+    while has_more:
+        body = {"page_size": 100}
+        if start_cursor:
+            body["start_cursor"] = start_cursor
+        response = notion.request(f"databases/{database_id}/query", "POST", body=body)
+
+        for page in response.get("results", []):
+            page_id = page["id"]
+            props = page.get("properties", {})
+
+            sort_prop = props.get("Sort Order", {})
+            if sort_prop.get("number") is not None:
+                continue
+
+            posted = ""
+            date_prop = props.get("Date Found", {})
+            date_obj = date_prop.get("date")
+            if date_obj and date_obj.get("start"):
+                posted = date_obj["start"]
+
+            if not posted:
+                url_prop = props.get("Apply URL", {})
+                url_value = url_prop.get("url", "")
+
+            sort_val = _posted_to_sort_order(posted)
+            if sort_val:
+                notion.pages.update(page_id=page_id, properties={
+                    "Sort Order": {"number": sort_val}
+                })
+                updated += 1
+
+        has_more = response.get("has_more", False)
+        start_cursor = response.get("next_cursor")
+
+    if updated:
+        logger.info(f"Notion: backfilled Sort Order for {updated} pages")
