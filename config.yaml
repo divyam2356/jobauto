@@ -1,0 +1,67 @@
+linkedin:
+  search_queries:
+    - keywords: "ML engineer"
+      locations: ["India", "remote"]
+    - keywords: "AI engineer"
+      locations: ["India", "remote"]
+    - keywords: "machine learning engineer"
+      locations: ["India", "remote"]
+    - keywords: "software engineer"
+      locations: ["India", "remote"]
+    - keywords: "data scientist"
+      locations: ["India", "remote"]
+  experience_level: "entry"
+  max_pages_per_query: 5
+  delay_seconds: 4
+
+greenhouse:
+  boards:
+    - name: "Anthropic"
+      token: "anthropic"
+    - name: "Together AI"
+      token: "togetherai"
+
+ashby:
+  boards:
+    - name: "Modal"
+      slug: "modal"
+    - name: "Anyscale"
+      slug: "anyscale"
+
+adzuna:
+  countries: ["in"]
+  search_terms:
+    - "ML engineer"
+    - "AI engineer"
+    - "software engineer"
+    - "data scientist"
+
+remoteok:
+  tags:
+    - "junior"
+    - "machine learning"
+    - "data scientist"
+    - "software engineer"
+
+entry_level:
+  include:
+    - "junior"
+    - "entry"
+    - "associate"
+    - "intern"
+    - "graduate"
+    - "new grad"
+    - "0-2"
+    - "early career"
+    - "trainee"
+  exclude:
+    - "senior"
+    - "staff"
+    - "principal"
+    - "lead"
+    - "director"
+    - "vp"
+    - "head"
+    - "chief"
+    - "sr."
+    - "sr "
