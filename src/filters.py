@@ -15,15 +15,11 @@ def is_entry_level(title, config):
         if kw.lower() in title_lower:
             return False
 
-    include_keywords = config.get("entry_level", {}).get("include", [])
-    for kw in include_keywords:
-        if kw.lower() in title_lower:
-            return True
-
-    years_match = re.search(r"\b(\d{1,2})\s*(?:years?|yrs?)\b", title_lower)
+    years_match = re.search(r"\b(\d{1,2})\+?\s*(?:years?|yrs?)\b", title_lower)
     if years_match:
         years = int(years_match.group(1))
-        return years <= 2
+        if years >= 3:
+            return False
 
     return True
 
